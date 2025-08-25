@@ -27,10 +27,12 @@ export default function Home() {
     // Enhance data with Benzinga API if requested and available
     if (enhanceWithBenzinga) {
       try {
-        const { enhanceStockDataWithBenzinga } = await import('@/lib/benzinga');
-        const enhancedData = await enhanceStockDataWithBenzinga(data);
-        setExcelData(enhancedData);
-        setSelectedStocks(enhancedData.slice(0, 3)); // Default to top 3 stocks
+        const { fetchEnhancedStockData } = await import('@/lib/benzinga');
+        // Note: fetchEnhancedStockData requires API keys and symbol array
+        // For now, just use the basic data
+        console.log('Benzinga enhancement requires API keys, using basic data');
+        setExcelData(data);
+        setSelectedStocks(data.slice(0, 3)); // Default to top 3 stocks
       } catch (error) {
         console.log('Benzinga enhancement not available, using basic data');
         setExcelData(data);
