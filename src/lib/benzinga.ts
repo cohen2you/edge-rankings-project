@@ -157,7 +157,7 @@ async function fetchStockData(symbol: string, apiKey: string): Promise<BenzingaS
         
         // Get the most recent rating
         const mostRecentRating = ratingsArray
-          .sort((a, b) => Date.parse(b.date) - Date.parse(a.date))[0] || {};
+          .sort((a: any, b: any) => Date.parse(b.date) - Date.parse(a.date))[0] || {};
         
         ratingsData = mostRecentRating;
         console.log(`🔍 [RATINGS] Extracted most recent rating for ${symbol}:`, JSON.stringify(ratingsData, null, 2));
