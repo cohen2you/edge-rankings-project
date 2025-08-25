@@ -122,7 +122,7 @@ async function fetchStockData(symbol: string, apiKey: string): Promise<BenzingaS
     const priceActionRes = await fetch(priceActionUrl);
     console.log(`🔍 [STOCK DATA] Response status: ${priceActionRes.status} for ${symbol}`);
     
-    let quote = {};
+         let quote: any = {};
     if (priceActionRes.ok) {
       const priceData = await priceActionRes.json();
       console.log(`🔍 [STOCK DATA] Raw price data for ${symbol}:`, JSON.stringify(priceData, null, 2));
@@ -136,7 +136,7 @@ async function fetchStockData(symbol: string, apiKey: string): Promise<BenzingaS
     }
 
     // Analyst ratings call - following the exact working pattern from the analyst-ratings route
-    let ratingsData = {};
+         let ratingsData: any = {};
     try {
       const ratingsUrl = `https://api.benzinga.com/api/v2.1/calendar/ratings?token=${apiKey}&parameters[tickers]=${encodeURIComponent(symbol)}&parameters[range]=6m`;
       console.log(`🔍 [RATINGS] Calling URL: ${ratingsUrl.replace(apiKey, '***HIDDEN***')}`);
