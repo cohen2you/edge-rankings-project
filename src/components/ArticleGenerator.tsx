@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { ArticleData } from '@/types';
-import { formatArticleForDisplay } from '@/lib/ai';
+import { formatArticleForDisplay, formatArticleForWordPress } from '@/lib/ai';
 import { DocumentArrowDownIcon, ClipboardDocumentIcon, SparklesIcon, ArrowUturnLeftIcon } from '@heroicons/react/24/outline';
 
 interface ArticleGeneratorProps {
@@ -21,6 +21,7 @@ interface NarrativeStory {
 
 export default function ArticleGenerator({ article, onBack }: ArticleGeneratorProps) {
   const [copied, setCopied] = useState(false);
+  const [wordPressCopied, setWordPressCopied] = useState(false);
   const [showNarrativeModal, setShowNarrativeModal] = useState(false);
   const [narrativeStories, setNarrativeStories] = useState<NarrativeStory[]>([]);
   const [loadingStories, setLoadingStories] = useState(false);
@@ -35,6 +36,17 @@ export default function ArticleGenerator({ article, onBack }: ArticleGeneratorPr
       await navigator.clipboard.writeText(formattedArticle);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy to clipboard:', error);
+    }
+  };
+
+  const handleCopyWordPress = async () => {
+    const formattedArticle = formatArticleForWordPress(currentArticle);
+    try {
+      await navigator.clipboard.writeText(formattedArticle);
+      setWordPressCopied(true);
+      setTimeout(() => setWordPressCopied(false), 2000);
     } catch (error) {
       console.error('Failed to copy to clipboard:', error);
     }
@@ -143,12 +155,13 @@ export default function ArticleGenerator({ article, onBack }: ArticleGeneratorPr
       rankingText = `showed a significant week-over-week increase in momentum score`;
     }
 
+    const exchange = stock.exchange || 'NASDAQ';
+
     return (
       <div key={stock.symbol} className="mb-8">
         <h3 className="text-lg font-semibold text-gray-900 mb-1">
-          {stock.companyName} Inc
+          {stock.companyName} Inc ({exchange}: {stock.symbol})
         </h3>
-        <p className="text-sm text-gray-600 mb-3">({stock.symbol})</p>
         
         <p className="text-gray-700 mb-4">
           {rankingText}, moving from a score of {stock.previousMomentum.toFixed(2)} to a current score of {stock.currentMomentum.toFixed(2)}. {stock.companyName} shares are up about {Math.abs(stock.priceChangePercent).toFixed(0)}% over the past week, according to Benzinga Pro.
@@ -208,7 +221,15 @@ export default function ArticleGenerator({ article, onBack }: ArticleGeneratorPr
             className="btn-secondary flex items-center space-x-2"
           >
             <ClipboardDocumentIcon className="h-4 w-4" />
-            <span>{copied ? 'Copied!' : 'Copy to Clipboard'}</span>
+            <span>{copied ? 'Copied!' : 'Copy Article'}</span>
+          </button>
+
+          <button
+            onClick={handleCopyWordPress}
+            className="btn-secondary flex items-center space-x-2"
+          >
+            <ClipboardDocumentIcon className="h-4 w-4" />
+            <span>{wordPressCopied ? 'Copied!' : 'Copy for WordPress'}</span>
           </button>
           
           <button
@@ -246,6 +267,51 @@ export default function ArticleGenerator({ article, onBack }: ArticleGeneratorPr
           <div className="space-y-6">
             {currentArticle.stocks.map((stock, index) => formatStockSection(stock, index))}
           </div>
+
+          {/* Sector Comparison Section */}
+          {currentArticle.sectorComparison && currentArticle.sectorComparison.length > 0 && (
+            <div className="mt-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                Sector Comparison
+              </h2>
+              <p className="text-gray-700 mb-6">
+                Here's how these momentum stocks compare to major sector players:
+              </p>
+              
+              <div className="overflow-x-auto">
+                <table className="min-w-full bg-white border border-gray-200 rounded-lg">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Market Cap</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Edge Score</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Momentum</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Growth</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quality</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Percentile</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {currentArticle.sectorComparison.map((comparison, index) => (
+                      <tr key={comparison.symbol} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                        <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                          {comparison.companyName} ({comparison.exchange || 'NASDAQ'}: {comparison.symbol})
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-900">${comparison.currentPrice.toFixed(2)}</td>
+                        <td className="px-4 py-3 text-sm text-gray-900">${(comparison.marketCap / 1000000000).toFixed(2)}B</td>
+                        <td className="px-4 py-3 text-sm text-gray-900">{comparison.edgeScore.toFixed(1)}/100</td>
+                        <td className="px-4 py-3 text-sm text-gray-900">{comparison.momentumScore.toFixed(1)}/100</td>
+                        <td className="px-4 py-3 text-sm text-gray-900">{comparison.growthScore.toFixed(1)}/100</td>
+                        <td className="px-4 py-3 text-sm text-gray-900">{comparison.qualityScore.toFixed(1)}/100</td>
+                        <td className="px-4 py-3 text-sm text-gray-900">{comparison.overallPercentile.toFixed(1)}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

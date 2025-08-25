@@ -215,8 +215,8 @@ export function formatArticleForDisplay(article: ArticleData): string {
   formatted += `Identifying significant changes in momentum can help traders get ahead of potential changes in general stock direction. Benzinga's rankings system flagged ${article.stocks.length} stocks that saw significant swings in bullish momentum over the past week.\n\n`;
   
   article.stocks.forEach((stock, index) => {
-    formatted += `${stock.companyName} Inc\n`;
-    formatted += `(${stock.symbol})\n`;
+    const exchange = stock.exchange || 'NASDAQ';
+    formatted += `**${stock.companyName} Inc (${exchange}: ${stock.symbol})**\n\n`;
     
     // Use proper ranking language based on position
     let rankingText;
@@ -249,6 +249,92 @@ export function formatArticleForDisplay(article: ArticleData): string {
       formatted += `\n\n`;
     }
   });
+  
+  // Add sector comparison section if available
+  if (article.sectorComparison && article.sectorComparison.length > 0) {
+    formatted += `\n\n## Sector Comparison\n\n`;
+    formatted += `Here's how these momentum stocks compare to major sector players:\n\n`;
+    
+    article.sectorComparison.forEach((comparison, index) => {
+      const exchange = comparison.exchange || 'NASDAQ';
+      formatted += `**${comparison.companyName} (${exchange}: ${comparison.symbol})**\n`;
+      formatted += `- Current Price: $${comparison.currentPrice.toFixed(2)}\n`;
+      formatted += `- Market Cap: $${(comparison.marketCap / 1000000000).toFixed(2)}B\n`;
+      formatted += `- Edge Score: ${comparison.edgeScore.toFixed(1)}/100\n`;
+      formatted += `- Momentum Score: ${comparison.momentumScore.toFixed(1)}/100\n`;
+      formatted += `- Growth Score: ${comparison.growthScore.toFixed(1)}/100\n`;
+      formatted += `- Quality Score: ${comparison.qualityScore.toFixed(1)}/100\n`;
+      formatted += `- Overall Percentile: ${comparison.overallPercentile.toFixed(1)}%\n\n`;
+    });
+  }
+  
+  return formatted;
+}
+
+export function formatArticleForWordPress(article: ArticleData): string {
+  let formatted = `<h1>${article.title}</h1>\n\n`;
+  formatted += `<p>${article.introduction}</p>\n\n`;
+  
+  formatted += `<h2>Momentum Stocks To Add To Your Watchlist</h2>\n`;
+  formatted += `<p>Benzinga's Edge Stock Rankings system assigns scores based on momentum, growth, value and quality. The momentum score is a valuable metric for short-term trading strategies that aim to capture continuation of price trends.</p>\n\n`;
+  
+  formatted += `<p>Identifying significant changes in momentum can help traders get ahead of potential changes in general stock direction. Benzinga's rankings system flagged ${article.stocks.length} stocks that saw significant swings in bullish momentum over the past week.</p>\n\n`;
+  
+  article.stocks.forEach((stock, index) => {
+    const exchange = stock.exchange || 'NASDAQ';
+    formatted += `<h3>${stock.companyName} Inc (${exchange}: ${stock.symbol})</h3>\n\n`;
+    
+    // Use proper ranking language based on position
+    let rankingText;
+    if (index === 0) {
+      rankingText = `experienced the largest week-over-week increase in momentum score`;
+    } else if (index === 1) {
+      rankingText = `saw the second-largest week-over-week increase in momentum score`;
+    } else if (index === 2) {
+      rankingText = `recorded the third-largest week-over-week increase in momentum score`;
+    } else {
+      rankingText = `showed a significant week-over-week increase in momentum score`;
+    }
+    
+    formatted += `<p>${rankingText}, moving from a score of ${stock.previousMomentum.toFixed(2)} to a current score of ${stock.currentMomentum.toFixed(2)}. ${stock.companyName} shares are up about ${Math.abs(stock.priceChangePercent).toFixed(0)}% over the past week, according to Benzinga Pro.</p>\n\n`;
+    
+    // Use the actual AI-generated content instead of overriding it
+    if (stock.technicalAnalysis && stock.technicalAnalysis !== 'Technical analysis shows mixed signals for this stock.') {
+      formatted += `<p>${stock.technicalAnalysis}</p>\n\n`;
+    }
+    
+    if (stock.fundamentalAnalysis && stock.fundamentalAnalysis !== 'Fundamental analysis shows mixed indicators for this stock.') {
+      formatted += `<p>${stock.fundamentalAnalysis}</p>\n\n`;
+    }
+    
+    if (stock.analystInsights && stock.analystInsights !== 'Analyst coverage for this stock shows mixed sentiment.') {
+      formatted += `<p>${stock.analystInsights}</p>\n\n`;
+    }
+  });
+  
+  // Add sector comparison section if available
+  if (article.sectorComparison && article.sectorComparison.length > 0) {
+    formatted += `<h2>Sector Comparison</h2>\n\n`;
+    formatted += `<p>Here's how these momentum stocks compare to major sector players:</p>\n\n`;
+    
+    formatted += `<table class="wp-block-table">\n<thead>\n<tr>\n<th>Stock</th>\n<th>Price</th>\n<th>Market Cap</th>\n<th>Edge Score</th>\n<th>Momentum</th>\n<th>Growth</th>\n<th>Quality</th>\n<th>Percentile</th>\n</tr>\n</thead>\n<tbody>\n`;
+    
+    article.sectorComparison.forEach((comparison) => {
+      const exchange = comparison.exchange || 'NASDAQ';
+      formatted += `<tr>\n`;
+      formatted += `<td><strong>${comparison.companyName} (${exchange}: ${comparison.symbol})</strong></td>\n`;
+      formatted += `<td>$${comparison.currentPrice.toFixed(2)}</td>\n`;
+      formatted += `<td>$${(comparison.marketCap / 1000000000).toFixed(2)}B</td>\n`;
+      formatted += `<td>${comparison.edgeScore.toFixed(1)}/100</td>\n`;
+      formatted += `<td>${comparison.momentumScore.toFixed(1)}/100</td>\n`;
+      formatted += `<td>${comparison.growthScore.toFixed(1)}/100</td>\n`;
+      formatted += `<td>${comparison.qualityScore.toFixed(1)}/100</td>\n`;
+      formatted += `<td>${comparison.overallPercentile.toFixed(1)}%</td>\n`;
+      formatted += `</tr>\n`;
+    });
+    
+    formatted += `</tbody>\n</table>\n\n`;
+  }
   
   return formatted;
 }

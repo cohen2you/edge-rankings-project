@@ -1,6 +1,7 @@
 export interface EdgeRankingData {
   symbol: string;
   companyName: string;
+  exchange?: string; // NYSE, NASDAQ, etc.
   momentumScore: number;
   previousMomentumScore?: number;
   valueScore?: number;
@@ -89,12 +90,32 @@ export interface ArticleData {
   title: string;
   introduction: string;
   stocks: StockArticle[];
+  sectorComparison?: SectorComparisonArticle[];
   conclusion?: string;
+}
+
+export interface SectorComparisonArticle {
+  symbol: string;
+  companyName: string;
+  exchange?: string;
+  edgeScore: number;
+  momentumScore: number;
+  valueScore: number;
+  growthScore: number;
+  qualityScore: number;
+  momentumPercentile: number;
+  valuePercentile: number;
+  growthPercentile: number;
+  qualityPercentile: number;
+  overallPercentile: number;
+  currentPrice: number;
+  marketCap: number;
 }
 
 export interface StockArticle {
   symbol: string;
   companyName: string;
+  exchange?: string;
   momentumChange: number;
   currentMomentum: number;
   previousMomentum: number;
