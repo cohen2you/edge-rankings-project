@@ -61,8 +61,8 @@ export default function ExcelPreview({
         return sectorGroups.flatMap(group => group.stocks);
       default:
         return [...dataWithComputedFields].sort((a, b) => {
-          const aValue = a[sortField];
-          const bValue = b[sortField];
+          const aValue = (a as any)[sortField];
+          const bValue = (b as any)[sortField];
           
           if (typeof aValue === 'number' && typeof bValue === 'number') {
             return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
