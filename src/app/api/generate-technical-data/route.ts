@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { EdgeRankingData } from '@/types';
-import { fetchEnhancedStockData } from '@/lib/benzinga';
+import { fetchCombinedStockData } from '@/lib/stockData';
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,31 +18,34 @@ export async function POST(request: NextRequest) {
     }
 
     // Get server-side API keys
+    const polygonApiKey = process.env.POLYGON_API_KEY;
     const benzingaApiKey = process.env.BENZINGA_API_KEY;
     const benzingaEdgeApiKey = process.env.BENZINGA_EDGE_API_KEY;
     
     // Debug: Check if environment variables are loaded
     console.log('Environment check:', {
+      polygonKey: polygonApiKey ? 'Present' : 'Missing',
       benzingaKey: benzingaApiKey ? 'Present' : 'Missing',
       benzingaEdgeKey: benzingaEdgeApiKey ? 'Present' : 'Missing'
     });
     
-    if (!benzingaApiKey || !benzingaEdgeApiKey) {
-      console.log('Benzinga API keys not configured');
+    if (!polygonApiKey || !benzingaApiKey || !benzingaEdgeApiKey) {
+      console.log('API keys not configured');
       return NextResponse.json(
-        { error: 'Benzinga API keys not configured. Please set BENZINGA_API_KEY and BENZINGA_EDGE_API_KEY in your environment.' },
+        { error: 'API keys not configured. Please set POLYGON_API_KEY, BENZINGA_API_KEY and BENZINGA_EDGE_API_KEY in your environment.' },
         { status: 500 }
       );
     }
 
-    // Fetch enhanced data from Benzinga APIs
-    console.log('Fetching enhanced Benzinga data...');
-    const enhancedData = await fetchEnhancedStockData(
-      stocks.map(s => s.symbol),
+    // Fetch combined data from Polygon and Benzinga APIs
+    console.log('Fetching combined data from Polygon and Benzinga...');
+    const enhancedData = await fetchCombinedStockData(
+      stocks.map((s: EdgeRankingData) => s.symbol),
+      polygonApiKey,
       benzingaApiKey,
       benzingaEdgeApiKey
     );
-    console.log('Enhanced data fetched for symbols:', Object.keys(enhancedData));
+    console.log('Combined data fetched for symbols:', Object.keys(enhancedData));
 
     return NextResponse.json({ technicalData: enhancedData });
   } catch (error) {

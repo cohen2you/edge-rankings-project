@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { fetchEnhancedStockData } from '@/lib/benzinga';
+import { fetchCombinedStockData } from '@/lib/stockData';
 
 function determineSector(stocks: any[]): string {
   // Use the actual sector data from the stocks
@@ -106,12 +106,13 @@ export async function POST(request: NextRequest) {
     })));
     
     // Get server-side API keys
+    const polygonApiKey = process.env.POLYGON_API_KEY;
     const benzingaApiKey = process.env.BENZINGA_API_KEY;
     const benzingaEdgeApiKey = process.env.BENZINGA_EDGE_API_KEY;
     
-    if (!benzingaApiKey || !benzingaEdgeApiKey) {
+    if (!polygonApiKey || !benzingaApiKey || !benzingaEdgeApiKey) {
       return NextResponse.json(
-        { error: 'Benzinga API keys not configured' },
+        { error: 'API keys not configured. Please set POLYGON_API_KEY, BENZINGA_API_KEY and BENZINGA_EDGE_API_KEY' },
         { status: 500 }
       );
     }
@@ -138,8 +139,9 @@ export async function POST(request: NextRequest) {
     }
     
     // Fetch sector comparison data
-    const sectorComparisonData = await fetchEnhancedStockData(
+    const sectorComparisonData = await fetchCombinedStockData(
       majorSectorStocks,
+      polygonApiKey,
       benzingaApiKey,
       benzingaEdgeApiKey
     );

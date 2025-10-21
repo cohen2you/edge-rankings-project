@@ -266,30 +266,41 @@ export default function TechnicalDataTemplate({
                   <div className="space-y-3">
                     <h4 className="font-medium text-gray-900">Technical Indicators</h4>
                     <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">RSI:</span>
-                        <span className="font-medium">{(stockData?.technicalIndicators?.rsi || 0).toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">MACD:</span>
-                        <span className={`font-medium ${
-                          (stockData?.technicalIndicators?.macd || 'Neutral') === 'Bullish' ? 'text-green-600' : 'text-red-600'
-                        }`}>
-                          {stockData?.technicalIndicators?.macd || 'Neutral'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">20-Day MA:</span>
-                        <span className="font-medium">${(stockData?.technicalIndicators?.movingAverages?.sma20 || 0).toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">50-Day MA:</span>
-                        <span className="font-medium">${(stockData?.technicalIndicators?.movingAverages?.sma50 || 0).toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">200-Day MA:</span>
-                        <span className="font-medium">${(stockData?.technicalIndicators?.movingAverages?.sma200 || 0).toFixed(2)}</span>
-                      </div>
+                      {stockData?.technicalIndicators?.rsi && stockData.technicalIndicators.rsi > 0 ? (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">RSI:</span>
+                          <span className="font-medium">{stockData.technicalIndicators.rsi.toFixed(2)}</span>
+                        </div>
+                      ) : null}
+                      {stockData?.technicalIndicators?.macd && stockData.technicalIndicators.macd !== 'Neutral' ? (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">MACD:</span>
+                          <span className={`font-medium ${
+                            stockData.technicalIndicators.macd === 'Bullish' ? 'text-green-600' : 
+                            stockData.technicalIndicators.macd === 'Bearish' ? 'text-red-600' : 
+                            'text-gray-600'
+                          }`}>
+                            {stockData.technicalIndicators.macd}
+                          </span>
+                        </div>
+                      ) : null}
+                      {stockData?.technicalIndicators?.movingAverages?.sma50 && stockData.technicalIndicators.movingAverages.sma50 > 0 ? (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">50-Day MA:</span>
+                          <span className="font-medium">${stockData.technicalIndicators.movingAverages.sma50.toFixed(2)}</span>
+                        </div>
+                      ) : null}
+                      {stockData?.technicalIndicators?.movingAverages?.sma200 && stockData.technicalIndicators.movingAverages.sma200 > 0 ? (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">200-Day MA:</span>
+                          <span className="font-medium">${stockData.technicalIndicators.movingAverages.sma200.toFixed(2)}</span>
+                        </div>
+                      ) : null}
+                      {!stockData || (!stockData.technicalIndicators?.rsi && !stockData.technicalIndicators?.macd && !stockData.technicalIndicators?.movingAverages?.sma50) && (
+                        <div className="text-sm text-gray-500">
+                          Technical indicator data not available
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -367,43 +378,7 @@ export default function TechnicalDataTemplate({
                     </div>
                   </div>
 
-                  {/* News Sentiment */}
-                  <div className="space-y-3">
-                    <h4 className="font-medium text-gray-900">News Sentiment</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Bullish:</span>
-                        <span className="font-medium text-green-600">{stockData?.newsSentiment?.bullish || 0}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Bearish:</span>
-                        <span className="font-medium text-red-600">{stockData?.newsSentiment?.bearish || 0}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Neutral:</span>
-                        <span className="font-medium text-gray-600">{stockData?.newsSentiment?.neutral || 0}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Total Articles:</span>
-                        <span className="font-medium">{stockData?.newsSentiment?.totalArticles || 0}</span>
-                      </div>
-                    </div>
-                  </div>
 
-                  {/* Support & Resistance */}
-                  <div className="space-y-3">
-                    <h4 className="font-medium text-gray-900">Support & Resistance</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Support:</span>
-                        <span className="font-medium">${(stockData?.technicalIndicators?.support || 0).toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Resistance:</span>
-                        <span className="font-medium">${(stockData?.technicalIndicators?.resistance || 0).toFixed(2)}</span>
-                      </div>
-                    </div>
-                  </div>
 
                 {/* Excel Data Summary */}
                 {(stock.previousMomentumScore !== undefined || stock.priceChangePercent !== undefined) && (

@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { EdgeRankingData, ArticleData } from '@/types';
 import { 
-  fetchEnhancedStockData, 
   generateTechnicalAnalysis, 
   generateFundamentalAnalysis, 
   generateRiskAssessment,
-  BenzingaStockData,
   BenzingaEdgeData
 } from '@/lib/benzinga';
+import { fetchCombinedStockData, CombinedStockData } from '@/lib/stockData';
 
 export async function POST(request: NextRequest) {
   try {
@@ -60,17 +59,18 @@ export async function POST(request: NextRequest) {
       benzingaEdge: !!benzingaEdgeApiKey
     });
     
-    let enhancedData: { [symbol: string]: { stockData: BenzingaStockData; edgeData: BenzingaEdgeData } } = {};
+    let enhancedData: { [symbol: string]: { stockData: CombinedStockData; edgeData: BenzingaEdgeData } } = {};
     
-    if (benzingaApiKey && benzingaEdgeApiKey) {
+    if (polygonApiKey && benzingaApiKey && benzingaEdgeApiKey) {
       try {
-        console.log('Fetching enhanced Benzinga data...');
-        enhancedData = await fetchEnhancedStockData(
+        console.log('Fetching combined data from Polygon and Benzinga...');
+        enhancedData = await fetchCombinedStockData(
           selectedStocks.map(s => s.symbol),
+          polygonApiKey,
           benzingaApiKey,
           benzingaEdgeApiKey
         );
-        console.log('Enhanced data fetched for symbols:', Object.keys(enhancedData));
+        console.log('Combined data fetched for symbols:', Object.keys(enhancedData));
 
         // Peer data will be fetched separately via the "Fetch Sector Tickers" button
       } catch (error) {
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
 
 async function generateEnhancedArticle(
   stocks: EdgeRankingData[], 
-  enhancedData: { [symbol: string]: { stockData: BenzingaStockData; edgeData: BenzingaEdgeData } },
+  enhancedData: { [symbol: string]: { stockData: CombinedStockData; edgeData: BenzingaEdgeData } },
   apiKey: string,
   rankingCategory: string = 'Momentum'
 ): Promise<ArticleData> {
@@ -240,7 +240,7 @@ function getMajorSectorStocksForArticle(sector: string): string[] {
 
 function createEnhancedArticlePrompt(
   stocks: EdgeRankingData[], 
-  enhancedData: { [symbol: string]: { stockData: BenzingaStockData; edgeData: BenzingaEdgeData } },
+  enhancedData: { [symbol: string]: { stockData: CombinedStockData; edgeData: BenzingaEdgeData } },
   rankingCategory: string = 'Momentum'
 ): string {
   
@@ -358,13 +358,40 @@ function createEnhancedArticlePrompt(
     if (stockEnhanced) {
       const { stockData, edgeData } = stockEnhanced;
       
-      // Technical analysis details - use REAL-TIME price change from Benzinga API, not stale Excel data
+      // Technical analysis details - use REAL data from Polygon and Benzinga
       const priceDirection = stockData.changePercent >= 0 ? 'up' : 'down';
       // Get current day of week
       const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
       const today = days[new Date().getDay()];
       const priceChangeText = `The stock is ${priceDirection} ${Math.abs(stockData.changePercent).toFixed(1)}% on ${today}.`;
-      technicalDetails = `Technical indicators show ${stockData.technicalIndicators.rsi > 70 ? 'overbought conditions' : stockData.technicalIndicators.rsi < 30 ? 'oversold conditions' : 'neutral territory'} with RSI at ${stockData.technicalIndicators.rsi.toFixed(1)}. Price at $${stockData.price.toFixed(2)} shows ${stockData.price > stockData.technicalIndicators.movingAverages.sma20 ? 'strength above' : 'weakness below'} the 20-day moving average. ${priceChangeText} MACD indicates ${stockData.technicalIndicators.macd.toLowerCase()} momentum.`;
+      
+      // Build technical analysis using ONLY real data
+      let techAnalysis = `Currently trading at $${stockData.price.toFixed(2)}, ${priceChangeText}`;
+      
+      // RSI from Polygon
+      if (stockData.technicalIndicators.rsi > 0) {
+        const rsiCondition = stockData.technicalIndicators.rsi > 70 ? 'overbought' : 
+                             stockData.technicalIndicators.rsi < 30 ? 'oversold' : 'neutral';
+        techAnalysis += ` RSI at ${stockData.technicalIndicators.rsi.toFixed(1)} indicates ${rsiCondition} conditions.`;
+      }
+      
+      // Moving averages comparison
+      if (stockData.technicalIndicators.movingAverages.sma50 > 0) {
+        const vs50MA = stockData.price > stockData.technicalIndicators.movingAverages.sma50 ? 'above' : 'below';
+        techAnalysis += ` The stock is ${vs50MA} its 50-day moving average of $${stockData.technicalIndicators.movingAverages.sma50.toFixed(2)}.`;
+      }
+      
+      if (stockData.technicalIndicators.movingAverages.sma200 > 0) {
+        const vs200MA = stockData.price > stockData.technicalIndicators.movingAverages.sma200 ? 'above' : 'below';
+        techAnalysis += ` Price is ${vs200MA} the 200-day moving average of $${stockData.technicalIndicators.movingAverages.sma200.toFixed(2)}.`;
+      }
+      
+      // MACD from Polygon
+      if (stockData.technicalIndicators.macd && stockData.technicalIndicators.macd !== 'Neutral') {
+        techAnalysis += ` MACD signals ${stockData.technicalIndicators.macd.toLowerCase()} momentum.`;
+      }
+      
+      technicalDetails = techAnalysis;
       
       // Fundamental analysis details - only include scores that are calculated (> 0)
       const edgeScores: string[] = [];
@@ -440,7 +467,7 @@ CRITICAL: Use the exact headline provided above. Do not create your own headline
 function parseEnhancedArticle(
   text: string, 
   stocks: EdgeRankingData[], 
-  enhancedData: { [symbol: string]: { stockData: BenzingaStockData; edgeData: BenzingaEdgeData } },
+  enhancedData: { [symbol: string]: { stockData: CombinedStockData; edgeData: BenzingaEdgeData } },
   rankingCategory: string = 'Momentum'
 ): ArticleData {
   const lines = text.split('\n');
@@ -556,7 +583,7 @@ function parseEnhancedArticle(
 
 function generateFallbackArticle(
   stocks: EdgeRankingData[], 
-  enhancedData: { [symbol: string]: { stockData: BenzingaStockData; edgeData: BenzingaEdgeData } }
+  enhancedData: { [symbol: string]: { stockData: CombinedStockData; edgeData: BenzingaEdgeData } }
 ): ArticleData {
   const stockArticles = stocks.map(stock => {
     const stockEnhanced = enhancedData[stock.symbol];

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { fetchEnhancedStockData } from '@/lib/benzinga';
+import { fetchCombinedStockData } from '@/lib/stockData';
 import OpenAI from 'openai';
 
 const openai = new OpenAI({
@@ -40,17 +40,18 @@ export async function POST(request: NextRequest) {
     console.log('Detected ranking category from article:', rankingCategory);
     
     // Fetch enhanced data to get full company names
+    const polygonApiKey = process.env.POLYGON_API_KEY;
     const benzingaApiKey = process.env.BENZINGA_API_KEY;
     const benzingaEdgeApiKey = process.env.BENZINGA_EDGE_API_KEY;
     
     let enhancedTickerData: { [symbol: string]: any } = {};
-    if (benzingaApiKey && benzingaEdgeApiKey) {
+    if (polygonApiKey && benzingaApiKey && benzingaEdgeApiKey) {
       try {
         const symbols = selectedTickers.map((ticker: any) => ticker.symbol);
-        enhancedTickerData = await fetchEnhancedStockData(symbols, benzingaApiKey, benzingaEdgeApiKey);
-        console.log('Enhanced ticker data fetched:', Object.keys(enhancedTickerData));
+        enhancedTickerData = await fetchCombinedStockData(symbols, polygonApiKey, benzingaApiKey, benzingaEdgeApiKey);
+        console.log('Combined ticker data fetched:', Object.keys(enhancedTickerData));
       } catch (error) {
-        console.warn('Failed to fetch enhanced ticker data, using basic data:', error);
+        console.warn('Failed to fetch ticker data, using basic data:', error);
       }
     }
     

@@ -219,21 +219,22 @@ async function fetchStockData(symbol: string, apiKey: string): Promise<BenzingaS
       dividendYield: quote.dividendYield || quote.dividend_yield,
       beta: quote.beta,
       technicalIndicators: {
-        rsi: Math.random() * 100, // Mock data for now
-        macd: Math.random() > 0.5 ? 'Bullish' : 'Bearish',
+        rsi: 0, // Not available from Benzinga API
+        macd: 'Neutral', // Not available from Benzinga API
         movingAverages: {
-          sma20: Math.random() * 100 + 10,
-          sma50: Math.random() * 100 + 10,
-          sma200: Math.random() * 100 + 10,
+          sma20: 0, // Not provided by Benzinga
+          sma50: quote.fiftyDayAveragePrice || 0, // Real data from Benzinga
+          sma100: quote.hundredDayAveragePrice || 0, // Real data from Benzinga
+          sma200: quote.twoHundredDayAveragePrice || 0, // Real data from Benzinga
         },
-        support: Math.random() * 50 + 10,
-        resistance: Math.random() * 50 + 60,
+        support: 0, // Not available from Benzinga API
+        resistance: 0, // Not available from Benzinga API
       },
       newsSentiment: {
-        bullish: Math.floor(Math.random() * 10), // Mock data for now
-        bearish: Math.floor(Math.random() * 5),
-        neutral: Math.floor(Math.random() * 15),
-        totalArticles: Math.floor(Math.random() * 30),
+        bullish: 0, // Not available from Benzinga API
+        bearish: 0, // Not available from Benzinga API
+        neutral: 0, // Not available from Benzinga API
+        totalArticles: 0, // Not available from Benzinga API
       },
              analystRatings: {
          buy: ratingsData.rating_current === 'Buy' ? 1 : 0,
