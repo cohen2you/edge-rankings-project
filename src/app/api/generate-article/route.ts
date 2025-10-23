@@ -445,7 +445,7 @@ function createEnhancedArticlePrompt(
 
   // Peer comparison will be added separately via the "Add Tickers To Article" button
 
-  const finalPrompt = `Write an engaging financial article about these ${rankingCategory.toLowerCase()} stocks.
+  const finalPrompt = `Write a professional financial article about these ${rankingCategory.toLowerCase()} stocks.
 
 REQUIRED HEADLINE: ${headline}
 
@@ -454,7 +454,7 @@ STOCKS TO WRITE ABOUT: ${stocks.map(stock => `${stock.companyName} (${stock.symb
 DETAILED STOCK DATA TO INCORPORATE INTO THE NARRATIVE:
 ${stockDetails}
 
-Write a compelling narrative story that naturally weaves in all the technical and fundamental data provided above. Format company names in **bold** only on FIRST reference with ticker and exchange: **Company Name Inc.** (EXCHANGE: SYMBOL). For example: **Home Bancorp Inc.** (NASDAQ: HBCP) or **Monarch Casino & Resort Inc.** (NASDAQ: MCRI). On subsequent references, use ONLY the shortened company name without Inc/Corp/Ltd/LLC, without ticker, and without bold - just "Home Bancorp" or "Monarch Casino". 
+Write a clear, professional financial article that incorporates all the technical and fundamental data provided above. Use a straightforward, journalistic tone - avoid dramatic language, metaphors, or flowery descriptions. Focus on facts and data. Format company names in **bold** only on FIRST reference with ticker and exchange: **Company Name Inc.** (EXCHANGE: SYMBOL). For example: **Home Bancorp Inc.** (NASDAQ: HBCP) or **Monarch Casino & Resort Inc.** (NASDAQ: MCRI). On subsequent references, use ONLY the shortened company name without Inc/Corp/Ltd/LLC, without ticker, and without bold - just "Home Bancorp" or "Monarch Casino". 
 
 STRUCTURE FOR EACH STOCK:
 1. Lead with the ${rankingCategory} score change (e.g., "surged 101% from 49.73 to 99.86")
@@ -472,7 +472,7 @@ IMPORTANT:
 3. For stock PRICE movements, use the real-time data provided in the technical details (e.g., "The stock is down 1.3% on Tuesday"). Integrate price action EARLY when introducing each stock, right after mentioning the score change. Use specific day names instead of "recently".
 4. Keep paragraphs to 2 sentences maximum.
 
-CRITICAL: Use the exact headline provided above. Do not create your own headline. Start the article directly with the narrative content. Integrate the technical analysis and fundamental metrics naturally into the flowing narrative. Do not create separate sections or bullet points. Make the data part of the story, not an addendum.`;
+CRITICAL: Use the exact headline provided above. Do not create your own headline. Start the article directly with the content. Integrate the technical analysis and fundamental metrics naturally into the article. Do not create separate sections or bullet points. Make the data part of the article, not an addendum. Write in a professional, journalistic style without dramatic language.`;
 
   console.log('=== FINAL PROMPT ===');
   
