@@ -23,17 +23,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get server-side API key
-    const apiKey = process.env.OPENAI_API_KEY;
+    // Get server-side API key for OpenAI
+    const openaiApiKey = process.env.OPENAI_API_KEY;
     
-    // Debug: Check if environment variables are loaded
-    console.log('Environment check:', {
-      openaiKey: apiKey ? 'Present' : 'Missing',
-      benzingaKey: process.env.BENZINGA_API_KEY ? 'Present' : 'Missing',
-      benzingaEdgeKey: process.env.BENZINGA_EDGE_API_KEY ? 'Present' : 'Missing'
-    });
-    
-    if (!apiKey) {
+    if (!openaiApiKey) {
       console.log('No OpenAI API key configured');
       return NextResponse.json(
         { error: 'OpenAI API key not configured. Please set OPENAI_API_KEY in your environment.' },
@@ -50,11 +43,13 @@ export async function POST(request: NextRequest) {
       }))
       .sort((a, b) => (b.momentumChange || 0) - (a.momentumChange || 0)); // Keep sorted for article generation
 
-    // Fetch enhanced data from Benzinga APIs
+    // Fetch enhanced data from Polygon and Benzinga APIs
+    const polygonApiKey = process.env.POLYGON_API_KEY;
     const benzingaApiKey = process.env.BENZINGA_API_KEY;
     const benzingaEdgeApiKey = process.env.BENZINGA_EDGE_API_KEY;
     
-    console.log('Benzinga API keys available:', {
+    console.log('API keys available:', {
+      polygon: !!polygonApiKey,
       benzinga: !!benzingaApiKey,
       benzingaEdge: !!benzingaEdgeApiKey
     });
@@ -82,7 +77,7 @@ export async function POST(request: NextRequest) {
 
     // Generate enhanced article
     console.log('Generating enhanced article with OpenAI...');
-    const article = await generateEnhancedArticle(selectedStocks, enhancedData, apiKey, rankingCategory);
+    const article = await generateEnhancedArticle(selectedStocks, enhancedData, openaiApiKey, rankingCategory);
     console.log('Article generated successfully');
 
     return NextResponse.json({ article });
@@ -98,7 +93,7 @@ export async function POST(request: NextRequest) {
 async function generateEnhancedArticle(
   stocks: EdgeRankingData[], 
   enhancedData: { [symbol: string]: { stockData: CombinedStockData; edgeData: BenzingaEdgeData } },
-  apiKey: string,
+  openaiApiKey: string,
   rankingCategory: string = 'Momentum'
 ): Promise<ArticleData> {
 
@@ -112,7 +107,7 @@ async function generateEnhancedArticle(
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        'Authorization': `Bearer ${openaiApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -156,7 +151,7 @@ async function generateEnhancedArticle(
   }
 }
 
-function determineSector(stocks: EdgeRankingData[]): string {
+function determineSector(stocks: EdgeRankingData[]): { sector: string; isMultiSector: boolean } {
   // Use the actual sector data from the spreadsheet
   console.log('Determining sector from stocks:', stocks.map(s => ({ symbol: s.symbol, sector: s.sector, companyName: s.companyName })));
   
@@ -169,20 +164,27 @@ function determineSector(stocks: EdgeRankingData[]): string {
   
   if (sectors.length === 0) {
     console.log('No sector data found in spreadsheet, using general');
-    return 'general';
+    return { sector: 'general', isMultiSector: false };
   }
   
-  // Find the most common sector
-  const sectorCounts = sectors.reduce((acc, sector) => {
-    acc[sector] = (acc[sector] || 0) + 1;
-    return acc;
-  }, {} as { [key: string]: number });
+  // Check if multiple different sectors are present
+  const uniqueSectors = [...new Set(sectors)];
+  const isMultiSector = uniqueSectors.length > 1;
   
-  const mostCommonSector = Object.entries(sectorCounts)
-    .sort(([,a], [,b]) => b - a)[0][0];
+  console.log('Unique sectors:', uniqueSectors);
+  console.log('Is multi-sector:', isMultiSector);
   
-  console.log('Most common sector:', mostCommonSector);
-  return mostCommonSector;
+  // If multi-sector, return 'general' to avoid sector-specific headlines
+  if (isMultiSector) {
+    console.log('Multiple sectors detected, using general headline');
+    return { sector: 'general', isMultiSector: true };
+  }
+  
+  // Single sector - return it
+  const singleSector = uniqueSectors[0] || 'general';
+  console.log('Single sector selected:', singleSector);
+  
+  return { sector: singleSector, isMultiSector: false };
 }
 
 function getMajorSectorStocksForArticle(sector: string): string[] {
@@ -245,7 +247,7 @@ function createEnhancedArticlePrompt(
 ): string {
   
   // Determine sector for headline and context
-  const sector = determineSector(stocks);
+  const { sector, isMultiSector } = determineSector(stocks);
   const sectorStocks = stocks.length;
   
   // Generate engaging, sector-specific headline based on actual stock performance
@@ -268,7 +270,12 @@ function createEnhancedArticlePrompt(
   const topStock = stocks[0];
   
   // Format sector name for headlines
-  const formatSectorName = (sector: string) => {
+  const formatSectorName = (sector: string, isMultiSector: boolean) => {
+    // If multiple sectors, don't use sector name in headline
+    if (isMultiSector) {
+      return '';
+    }
+    
     const sectorMap: { [key: string]: string } = {
       'solar': 'Solar',
       'technology': 'Tech',
@@ -287,7 +294,7 @@ function createEnhancedArticlePrompt(
     return sectorMap[sector.toLowerCase()] || sector.charAt(0).toUpperCase() + sector.slice(1);
   };
   
-  const sectorName = formatSectorName(sector);
+  const sectorName = formatSectorName(sector, isMultiSector);
   const stockCount = stocks.length;
   const stockText = stockCount === 1 ? 'Stock' : stockCount === 2 ? 'Stocks' : `${stockCount} Stocks`;
   
@@ -304,13 +311,17 @@ function createEnhancedArticlePrompt(
     );
   } else {
     // Multiple stocks - use cleaner format
+    // Add space after sector name only if it exists
+    const sectorPrefix = sectorName ? `${sectorName} ` : '';
+    const sectorContext = sectorName || 'Market';
+    
     headlineTemplates.push(
-      `${stockCount} ${sectorName} ${stockText} See ${rankingCategory} Scores Surge — One Jumps ${Math.round(maxChangePercent)}%`,
-      `${stockCount} ${sectorName} Value Plays Emerge — Scores Surge Up to ${Math.round(maxChangePercent)}%`,
-      `Why Are These ${stockCount} ${sectorName} ${rankingCategory} Scores Surging? One Jumps ${Math.round(maxChangePercent)}%`,
-      `${stockCount} ${sectorName} ${stockText} Post ${rankingCategory} Score Gains — Top Performer Up ${Math.round(maxChangePercent)}%`,
-      `Hidden Value in ${sectorName}: ${stockCount} ${stockText} See Rankings Surge Up to ${Math.round(maxChangePercent)}%`,
-      `${stockCount} ${sectorName} ${stockText} Heat Up — ${rankingCategory} Scores Jump Up to ${Math.round(maxChangePercent)}%`
+      `${stockCount} ${sectorPrefix}${stockText} See ${rankingCategory} Scores Surge — One Jumps ${Math.round(maxChangePercent)}%`,
+      `${stockCount} ${sectorPrefix}Value Plays Emerge — Scores Surge Up to ${Math.round(maxChangePercent)}%`,
+      `Why Are These ${stockCount} ${sectorPrefix}${rankingCategory} Scores Surging? One Jumps ${Math.round(maxChangePercent)}%`,
+      `${stockCount} ${sectorPrefix}${stockText} Post ${rankingCategory} Score Gains — Top Performer Up ${Math.round(maxChangePercent)}%`,
+      `Hidden Value in ${sectorContext}: ${stockCount} ${stockText} See Rankings Surge Up to ${Math.round(maxChangePercent)}%`,
+      `${stockCount} ${sectorPrefix}${stockText} Heat Up — ${rankingCategory} Scores Jump Up to ${Math.round(maxChangePercent)}%`
     );
   }
   
@@ -425,7 +436,16 @@ function createEnhancedArticlePrompt(
       exchange = 'OTC'; // OTC stocks often have dots or longer symbols
     }
     
-    return `${formattedCompanyName} (${exchange}: ${stock.symbol}): ${rankingText}. ${technicalDetails} ${fundamentalDetails} ${analystDetails}`;
+    // Add company description if available from Polygon
+    let companyInfo = '';
+    if (stockEnhanced && stockEnhanced.stockData.description) {
+      // Truncate description to 1-2 sentences for brevity
+      const sentences = stockEnhanced.stockData.description.split(/[.!?]+/).filter(s => s.trim());
+      const shortDesc = sentences.slice(0, 2).join('.') + '.';
+      companyInfo = `Company background: ${shortDesc} `;
+    }
+    
+    return `${formattedCompanyName} (${exchange}: ${stock.symbol}): ${rankingText}. ${companyInfo}${technicalDetails} ${fundamentalDetails} ${analystDetails}`;
   }).join('\n\n');
 
   // Peer comparison will be added separately via the "Add Tickers To Article" button
@@ -443,13 +463,14 @@ Write a compelling narrative story that naturally weaves in all the technical an
 
 STRUCTURE FOR EACH STOCK:
 1. Lead with the ${rankingCategory} score change (e.g., "surged 101% from 49.73 to 99.86")
-2. IMMEDIATELY follow with price context: "Currently trading at $X.XX, [up/down] X.X% on [Day], the stock sits [above/below] its 20-day moving average"
-   - CRITICAL: Keep price change and MA position SEPARATE. Say "down 1.6% on Tuesday" AND "sits below its 20-day moving average" as two distinct facts
-   - DO NOT say "sliding 1.6% below its 20-day moving average" (confusing!)
+2. Briefly describe what the company does (1 sentence based on company background provided)
+3. IMMEDIATELY follow with price context: "Currently trading at $X.XX, [up/down] X.X% on [Day], the stock sits [above/below] its moving averages"
+   - CRITICAL: Keep price change and MA position SEPARATE. Say "down 1.6% on Tuesday" AND "sits below its 50-day moving average" as two distinct facts
+   - DO NOT say "sliding 1.6% below its moving average" (confusing!)
    - Use specific day name (Monday, Tuesday, etc.) instead of "recently"
-3. Then discuss other technical indicators (RSI, MACD, etc.)
-4. Then fundamental analysis (Edge scores)
-5. Finally analyst coverage (if available)
+4. Then discuss other technical indicators (RSI, MACD if available)
+5. Then fundamental analysis (Edge scores)
+6. Finally analyst coverage (if available)
 
 IMPORTANT: 
 1. When first mentioning the ranking scores, use the format "Benzinga Edge Ranking [Category] score" with the category capitalized (e.g., "Benzinga Edge Ranking Value score", "Benzinga Edge Ranking Quality score"). On subsequent references, use lowercase (e.g., "value scores", "quality scores"). 
@@ -473,13 +494,14 @@ function parseEnhancedArticle(
   const lines = text.split('\n');
   
   // Generate the headline based on the actual stock data
-  const sector = determineSector(stocks);
+  const { sector, isMultiSector } = determineSector(stocks);
   const topStock = stocks[0];
   const momentumChange = topStock.momentumScore - (topStock.previousMomentumScore || 0);
   const momentumChangePercent = ((momentumChange) / (topStock.previousMomentumScore || 1)) * 100;
   
   // Create clean, engaging headlines without company names in multi-stock articles
-  const sectorName = sector === 'general' ? '' : sector.charAt(0).toUpperCase() + sector.slice(1);
+  // Don't use sector name if multiple sectors are selected
+  const sectorName = (sector === 'general' || isMultiSector) ? '' : sector.charAt(0).toUpperCase() + sector.slice(1);
   const stockCount = stocks.length;
   const stockText = stockCount === 1 ? 'Stock' : stockCount === 2 ? 'Stocks' : `${stockCount} Stocks`;
   

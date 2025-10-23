@@ -2,6 +2,11 @@
 
 export interface PolygonStockData {
   symbol: string;
+  companyName?: string;
+  description?: string;
+  industry?: string;
+  sector?: string;
+  homepageUrl?: string;
   price: number;
   change: number;
   changePercent: number;
@@ -46,17 +51,35 @@ export async function fetchPolygonStockData(symbol: string, apiKey: string): Pro
       throw new Error('No price data available');
     }
     
-    // Fetch ticker details for market cap
+    // Fetch ticker details for market cap and company info
     const detailsUrl = `https://api.polygon.io/v3/reference/tickers/${symbol}?apiKey=${apiKey}`;
     console.log(`🔵 [POLYGON] Calling details URL for ${symbol}`);
     
     const detailsRes = await fetch(detailsUrl);
     let marketCap = 0;
+    let companyName = '';
+    let description = '';
+    let industry = '';
+    let sector = '';
+    let homepageUrl = '';
     
     if (detailsRes.ok) {
       const detailsData = await detailsRes.json();
-      marketCap = detailsData.results?.market_cap || 0;
-      console.log(`🔵 [POLYGON] Market cap for ${symbol}: ${marketCap}`);
+      const results = detailsData.results;
+      
+      marketCap = results?.market_cap || 0;
+      companyName = results?.name || '';
+      description = results?.description || '';
+      industry = results?.sic_description || '';
+      sector = results?.primary_exchange || ''; // Polygon uses different structure
+      homepageUrl = results?.homepage_url || '';
+      
+      console.log(`🔵 [POLYGON] Company info for ${symbol}:`, {
+        name: companyName,
+        marketCap,
+        industry,
+        description: description.substring(0, 100) + '...'
+      });
     }
     
     // Fetch SMA data (Simple Moving Averages)
@@ -124,6 +147,11 @@ export async function fetchPolygonStockData(symbol: string, apiKey: string): Pro
     
     return {
       symbol,
+      companyName,
+      description,
+      industry,
+      sector,
+      homepageUrl,
       price: bar.c, // close price
       change,
       changePercent,

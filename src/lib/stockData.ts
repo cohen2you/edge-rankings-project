@@ -6,6 +6,10 @@ import { BenzingaEdgeData } from './benzinga';
 export interface CombinedStockData {
   symbol: string;
   companyName?: string;
+  description?: string;
+  industry?: string;
+  sector?: string;
+  homepageUrl?: string;
   price: number;
   change: number;
   changePercent: number;
@@ -196,7 +200,11 @@ export async function fetchCombinedStockData(
       // Combine the data
       const combinedStockData: CombinedStockData = {
         symbol: polygonData.symbol,
-        companyName: undefined, // Polygon doesn't provide this easily
+        companyName: polygonData.companyName,
+        description: polygonData.description,
+        industry: polygonData.industry,
+        sector: polygonData.sector,
+        homepageUrl: polygonData.homepageUrl,
         price: polygonData.price,
         change: polygonData.change,
         changePercent: polygonData.changePercent,
