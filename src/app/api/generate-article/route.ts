@@ -168,7 +168,7 @@ function determineSector(stocks: EdgeRankingData[]): { sector: string; isMultiSe
   }
   
   // Check if multiple different sectors are present
-  const uniqueSectors = [...new Set(sectors)];
+  const uniqueSectors = Array.from(new Set(sectors));
   const isMultiSector = uniqueSectors.length > 1;
   
   console.log('Unique sectors:', uniqueSectors);
