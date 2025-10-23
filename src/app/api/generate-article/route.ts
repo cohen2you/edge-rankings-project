@@ -431,13 +431,40 @@ function createEnhancedArticlePrompt(
       exchange = 'OTC'; // OTC stocks often have dots or longer symbols
     }
     
-    // Add company description if available from Polygon
+    // Add detailed company information if available from Polygon
     let companyInfo = '';
-    if (stockEnhanced && stockEnhanced.stockData.description) {
-      // Truncate description to 1-2 sentences for brevity
-      const sentences = stockEnhanced.stockData.description.split(/[.!?]+/).filter(s => s.trim());
-      const shortDesc = sentences.slice(0, 2).join('.') + '.';
-      companyInfo = `Company background: ${shortDesc} `;
+    if (stockEnhanced) {
+      const { stockData } = stockEnhanced;
+      let companyDetails = [];
+      
+      // Company description (1-2 sentences)
+      if (stockData.description) {
+        const sentences = stockData.description.split(/[.!?]+/).filter(s => s.trim());
+        const shortDesc = sentences.slice(0, 2).join('.') + '.';
+        companyDetails.push(shortDesc);
+      }
+      
+      // Industry information
+      if (stockData.industry) {
+        companyDetails.push(`The company operates in the ${stockData.industry} industry.`);
+      }
+      
+      // Market cap information
+      if (stockData.marketCap > 0) {
+        const marketCapFormatted = stockData.marketCap >= 1000000000 
+          ? `$${(stockData.marketCap / 1000000000).toFixed(1)} billion`
+          : `$${(stockData.marketCap / 1000000).toFixed(1)} million`;
+        companyDetails.push(`With a market capitalization of ${marketCapFormatted},`);
+      }
+      
+      // Homepage/website if available
+      if (stockData.homepageUrl) {
+        companyDetails.push(`The company's website is ${stockData.homepageUrl}.`);
+      }
+      
+      if (companyDetails.length > 0) {
+        companyInfo = `Company background: ${companyDetails.join(' ')} `;
+      }
     }
     
     return `${formattedCompanyName} (${exchange}: ${stock.symbol}): ${rankingText}. ${companyInfo}${technicalDetails} ${fundamentalDetails} ${analystDetails}`;
@@ -458,7 +485,7 @@ Write a clear, professional financial article that incorporates all the technica
 
 STRUCTURE FOR EACH STOCK:
 1. Lead with the ${rankingCategory} score change (e.g., "surged 101% from 49.73 to 99.86")
-2. Briefly describe what the company does (1 sentence based on company background provided)
+2. Include detailed company information (description, industry, market cap, website if provided in company background)
 3. IMMEDIATELY follow with price context: "Currently trading at $X.XX, [up/down] X.X% on [Day], the stock sits [above/below] its moving averages"
    - CRITICAL: Keep price change and MA position SEPARATE. Say "down 1.6% on Tuesday" AND "sits below its 50-day moving average" as two distinct facts
    - DO NOT say "sliding 1.6% below its moving average" (confusing!)
