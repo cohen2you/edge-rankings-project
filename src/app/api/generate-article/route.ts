@@ -414,13 +414,8 @@ function createEnhancedArticlePrompt(
       const edgeScoreText = edgeScores.length > 0 ? `, with ${edgeScores.join(', ')}` : '';
       fundamentalDetails = `The company's Edge score of ${edgeData.edgeScore.toFixed(2)} indicates ${edgeData.edgeScore > 80 ? 'excellent' : edgeData.edgeScore > 60 ? 'good' : 'mixed'} fundamentals${edgeScoreText}.`;
       
-      // Analyst details
-      const totalRatings = stockData.analystRatings.buy + stockData.analystRatings.hold + stockData.analystRatings.sell;
-      if (totalRatings > 0) {
-        analystDetails = `Analyst coverage shows ${stockData.analystRatings.buy} buy, ${stockData.analystRatings.hold} hold, and ${stockData.analystRatings.sell} sell ratings with an average price target of $${stockData.analystRatings.averageTarget.toFixed(2)}.`;
-      } else {
-        analystDetails = `Limited analyst coverage is available for this stock.`;
-      }
+      // Skip analyst details to avoid showing empty/zero data
+      analystDetails = '';
     }
 
     // Format company name with Inc suffix if not already present
@@ -470,7 +465,6 @@ STRUCTURE FOR EACH STOCK:
    - Use specific day name (Monday, Tuesday, etc.) instead of "recently"
 4. Then discuss other technical indicators (RSI, MACD if available)
 5. Then fundamental analysis (Edge scores)
-6. Finally analyst coverage (if available)
 
 IMPORTANT: 
 1. When first mentioning the ranking scores, use the format "Benzinga Edge Ranking [Category] score" with the category capitalized (e.g., "Benzinga Edge Ranking Value score", "Benzinga Edge Ranking Quality score"). On subsequent references, use lowercase (e.g., "value scores", "quality scores"). 
@@ -478,7 +472,7 @@ IMPORTANT:
 3. For stock PRICE movements, use the real-time data provided in the technical details (e.g., "The stock is down 1.3% on Tuesday"). Integrate price action EARLY when introducing each stock, right after mentioning the score change. Use specific day names instead of "recently".
 4. Keep paragraphs to 2 sentences maximum.
 
-CRITICAL: Use the exact headline provided above. Do not create your own headline. Start the article directly with the narrative content. Integrate the technical analysis, fundamental metrics, and analyst data naturally into the flowing narrative. Do not create separate sections or bullet points. Make the data part of the story, not an addendum.`;
+CRITICAL: Use the exact headline provided above. Do not create your own headline. Start the article directly with the narrative content. Integrate the technical analysis and fundamental metrics naturally into the flowing narrative. Do not create separate sections or bullet points. Make the data part of the story, not an addendum.`;
 
   console.log('=== FINAL PROMPT ===');
   
